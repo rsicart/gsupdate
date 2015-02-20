@@ -30,6 +30,16 @@ def getRowId(row):
 	results = row.split('/')
 	return results[-1] # last element
 
+def isUpdateable(custom):
+    updateable = True
+    for field in settings.mandatory:
+        if custom[field].text is None or custom[field].text == '':
+            updateable = updateable and True
+        else:
+            updateable = updateable and False
+    return updateable
+
+
 def insertRow():
 	''' Appends a line to the document
 	'''
@@ -57,7 +67,7 @@ def updateRow(listFeed, reverse=False):
 	row = None
 	for i in iterable:
 		elem = listFeed.entry[i]
-		if elem.custom['name'].text is None:
+		if isUpdateable(elem.custom):
 			row = getRowId(listFeed.entry[i].id.text)
 			listFeed = client.GetListFeed(key=spreadsheet_key, wksht_id=worksheet_id, row_id=row) 
 			entry = client.UpdateRow(listFeed, line)
