@@ -93,7 +93,7 @@ if count == 0:
 	sys.exit(0)
 
 # try to update a row
-updated = updateRow(list_feed, True)
+updated = updateRow(list_feed, settings.append_end)
 
 # append new line
 if not updated:
