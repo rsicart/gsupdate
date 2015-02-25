@@ -34,3 +34,8 @@ line = {
 
 # used to decide if a row is updatable
 mandatory = [u'name', u'email']
+
+# script parameter mapping to spreadsheet columns
+mapping = {
+    'time': u'arrivéà',
+}

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding=utf8
 
-import sys
+import sys, getopt, re
 import settings
 import gdata.spreadsheet.service
 
@@ -69,7 +69,7 @@ def updateRow(listFeed, reverse=False):
 		elem = listFeed.entry[i]
 		if isUpdateable(elem.custom):
 			row = getRowId(listFeed.entry[i].id.text)
-			listFeed = client.GetListFeed(key=spreadsheet_key, wksht_id=worksheet_id, row_id=row) 
+			listFeed = client.GetListFeed(key=spreadsheet_key, wksht_id=worksheet_id, row_id=row)
 			entry = client.UpdateRow(listFeed, line)
 			if isinstance(entry, gdata.spreadsheet.SpreadsheetsList):
 				print "Update row succeeded."
@@ -80,33 +80,75 @@ def updateRow(listFeed, reverse=False):
 
 	return False
 
+def checkTime(time):
+    return time if re.match('[0-9]{2}:[0-9]{2}', time) is not None else None
 
-''' Main '''
-# auth
-client = gdata.spreadsheet.service.SpreadsheetsService()
-client.debug = settings.debug
-client.ClientLogin(settings.credentials[0], settings.credentials[1])
 
-# spreadsheet selection
-spreadsheet_key = settings.spreadsheet_key
-worksheet_id = settings.worksheet_id
+def usage():
+    print "python gsupdate.py -r [-t hh:mm]"
+    print "Options:"
+    print " -r: run"
+    print " -t: time in format hh:mm"
 
-# data to add
-line = settings.line
 
-# get worksheet feed
-list_feed = client.GetListFeed(key=spreadsheet_key, wksht_id=worksheet_id) 
 
-count = len(list_feed.entry)
-if count == 0:
-	insertRow()
-	sys.exit(0)
+if __name__ == '__main__':
 
-# try to update a row
-updated = updateRow(list_feed, settings.append_end)
+    try:
+        optlist, args = getopt.getopt(sys.argv[1:], 'rt:')
+    except getopt.GetoptError as err:
+        usage()
+        sys.exit(1)
 
-# append new line
-if not updated:
-	insertRow()
+    options = {
+        'run': False,
+        'time': None
+    }
 
-sys.exit(0)
+    for opt, value in optlist:
+        if opt == '-r':
+            options['run'] = True
+        elif opt == '-t':
+            options['time'] = checkTime(value)
+
+    if 'run' not in options.keys() or options['run'] is False:
+        print "Argument -r (for run) is mandatory!"
+        usage()
+        sys.exit(1)
+
+
+
+    ''' Main '''
+    # auth
+    client = gdata.spreadsheet.service.SpreadsheetsService()
+    client.debug = settings.debug
+    client.ClientLogin(settings.credentials[0], settings.credentials[1])
+
+    # spreadsheet selection
+    spreadsheet_key = settings.spreadsheet_key
+    worksheet_id = settings.worksheet_id
+
+    # default data to add
+    line = settings.line
+
+    # data overwrite
+    for k, v in options.items():
+        if k in settings.mapping:
+            line[settings.mapping[k]] = v
+
+    # get worksheet feed
+    list_feed = client.GetListFeed(key=spreadsheet_key, wksht_id=worksheet_id)
+
+    count = len(list_feed.entry)
+    if count == 0:
+            insertRow()
+            sys.exit(0)
+
+    # try to update a row
+    updated = updateRow(list_feed, settings.append_end)
+
+    # append new line
+    if not updated:
+            insertRow()
+
+    sys.exit(0)
